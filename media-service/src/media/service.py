@@ -24,5 +24,9 @@ class MediaService:
         return await MediaRepository.update(media_id, {"status": new_state})
 
     @classmethod
-    async def update_expire_time(cls, media_id: int, new_time: datetime) -> int:
-        return await MediaRepository.update(media_id, {"expires_at": new_time})
+    async def update_upload_expire_time(cls, media_id: int, new_time: datetime) -> int:
+        return await MediaRepository.update(media_id, {"upload_expires_at": new_time})
+
+    @classmethod
+    async def update_download_expire_time(cls, media_id: int, new_time: datetime) -> int:
+        return await MediaRepository.update(media_id, {"download_expires_at": new_time})

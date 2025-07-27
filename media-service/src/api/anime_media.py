@@ -23,6 +23,7 @@ async def init_upload_anime(files_list: Input1, s3_service: AsyncS3SignedURLServ
     media_model = MediaCreateSchema(
         s3_key=f"anime/{new_uid}/",
         status=MediaStatus.pending,
+        upload_expires_at=datetime.now() + timedelta(seconds=s3_service.expire_time)
     )
     new_media = await MediaService.add(media_model)
 
@@ -40,12 +41,16 @@ async def init_upload_anime(files_list: Input1, s3_service: AsyncS3SignedURLServ
             key=file_model.s3_key,
             content_type=file_model.content_type
         )
-        if file.content_type.split('/')[-2] == "image":
+        if file.file_name.find("logo") != -1:
+            upload_urls.logo.append(url)
+        elif file.file_name.find("image") != -1:
             upload_urls.images.append(url)
-        elif file.content_type.split('/')[-2] == "video":
-            upload_urls.video.append(url)
+        elif file.file_name.find("preview") != -1:
+            upload_urls.preview.append(url)
+        elif file.file_name.find("trailer") != -1:
+            upload_urls.trailers.append(url)
         else:
-            raise TypeError("Неизвестный content_type", file.content_type)
+            raise TypeError("Неизвестный content_type")
 
 
         await FileService.add(file_model)
@@ -59,7 +64,7 @@ async def confirm_upload_anime(media_id: int, s3_service: AsyncS3SignedURLServic
     try:
         s3_path_prefix = (await MediaService.get(media_id)).s3_key
     except IndexError as e:
-        return HTTPException(status_code=404, detail=e.args)
+        raise HTTPException(status_code=404, detail=e.args)
 
     result = await s3_service.check_upload_status(s3_path_prefix, expected_files)
     if result["complete"]:
@@ -72,10 +77,10 @@ async def get_media_anime(media_id: int, s3_service: AsyncS3SignedURLService = D
     try:
         media_status = (await MediaService.get(media_id)).status
     except IndexError as e:
-        return HTTPException(status_code=404, detail=e.args)
+        raise HTTPException(status_code=404, detail=e.args)
 
     if media_status == MediaStatus.pending:
-        return HTTPException(status_code=404, detail="Files upload doesn't confirmed")
+        raise HTTPException(status_code=404, detail="Files upload doesn't confirmed")
 
     files_list = await FileService.get_files_from_media(media_id)
     upload_urls = UploadUrls()
@@ -84,13 +89,17 @@ async def get_media_anime(media_id: int, s3_service: AsyncS3SignedURLService = D
 
         url = s3_service.generate_download_url(file.s3_key)
 
-        if file.content_type.split('/')[-2] == "image":
+        if file.file_name.find("logo") != -1:
+            upload_urls.logo.append(url)
+        elif file.file_name.find("image") != -1:
             upload_urls.images.append(url)
-        elif file.content_type.split('/')[-2] == "video":
-            upload_urls.video.append(url)
+        elif file.file_name.find("preview") != -1:
+            upload_urls.preview.append(url)
+        elif file.file_name.find("trailer") != -1:
+            upload_urls.trailers.append(url)
         else:
             raise TypeError("Неизвестный content_type")
 
-    await MediaService.update_expire_time(media_id, datetime.now() + timedelta(seconds=s3_service.expire_time))
+    await MediaService.update_download_expire_time(media_id, datetime.now() + timedelta(seconds=s3_service.expire_time))
 
     return Response1(media_id=media_id, upload_urls=upload_urls)

@@ -13,5 +13,6 @@ class MediaOrm(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     s3_key: Mapped[str]
     status: Mapped[str] = mapped_column(SqlEnum(MediaStatus, name="status"))
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    upload_expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    download_expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 

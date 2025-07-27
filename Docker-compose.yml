@@ -1,0 +1,14 @@
+services:
+  s3_service:
+    image: my-s3-api-containter:latest
+    ports:
+      - "8001:8001"
+    networks:
+      - backend_network
+
+networks:
+  backend_network:
+    external: true
+
+volumes:
+  s3_data:
